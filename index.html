@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VibraGuard - Monitoreo en Tiempo Real</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+    body { background-color: #eeeeee; padding: 20px; color: rgba(0,0,0,0.87); }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #fff; padding: 15px 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 20px; font-weight: 500; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media (min-width: 768px) { .grid { grid-template-columns: 1fr 2fr; } }
+    .card { background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .card-title { font-size: 14px; color: rgba(0,0,0,0.54); margin-bottom: 10px; font-weight: 500; }
+    .value-display { font-size: 48px; font-weight: 500; color: #2196f3; display: flex; align-items: baseline; }
+    .unit { font-size: 20px; margin-left: 8px; color: rgba(0,0,0,0.54); }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #fff; background-color: #4caf50; margin-top: 10px; }
+    .chart-container { position: relative; height: 350px; width: 100%; }
+    .controls { margin-top: 20px; background: #fff; padding: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .controls h3 { font-size: 14px; margin-bottom: 10px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; margin-right: 8px; color: #fff; }
+    .btn-normal { background: #4caf50; }
+    .btn-yellow { background: #d7f400; color: #000; }
+    .btn-orange { background: #ff7d00; }
+    .btn-red { background: #ff0307; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>VibraGuard - Monitoreo</h1>
+    <span style="font-size: 12px; color: #4caf50;">● En Vivo</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Nivel de Vibración Actual</div>
+      <div class="value-display">
+        <span id="currentValue">0.042</span>
+        <span class="unit">m/s²</span>
+      </div>
+      <div id="statusBadge" class="status-badge">ESTADO NORMAL</div>
+      <div style="font-size: 11px; color: rgba(0,0,0,0.38); margin-top: 15px;">Última actualización: hace unos segundos</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Aceleración Z - Tiempo Real</div>
+      <div class="chart-container">
+        <canvas id="vibrationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <h3>Simulador para demostración:</h3>
+    <button class="btn btn-normal" onclick="setMode('normal')">Modo Normal (&lt;0.1)</button>
+    <button class="btn btn-yellow" onclick="setMode('yellow')">Alerta Amarilla (0.1 - 0.2)</button>
+    <button class="btn btn-orange" onclick="setMode('orange')">Alerta Naranja (0.2 - 0.3)</button>
+    <button class="btn btn-red" onclick="setMode('red')">Alerta Roja (&gt;0.3)</button>
+  </div>
+
+  <script>
+    let mode = 'normal';
+    function setMode(newMode) { mode = newMode; }
+
+    function getRandomValue() {
+      if (mode === 'normal') return (Math.random() * 0.08).toFixed(3);
+      if (mode === 'yellow') return (0.10 + Math.random() * 0.09).toFixed(3);
+      if (mode === 'orange') return (0.20 + Math.random() * 0.09).toFixed(3);
+      if (mode === 'red') return (0.30 + Math.random() * 0.15).toFixed(3);
+    }
+
+    const ctx = document.getElementById('vibrationChart').getContext('2d');
+    const maxDataPoints = 30;
+    const initialLabels = Array.from({length: maxDataPoints}, (_, i) => '');
+    const initialData = Array.from({length: maxDataPoints}, () => 0.04);
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: initialLabels,
+        datasets: [{
+          label: 'Nivel de Vibración (m/s²)',
+          data: initialData,
+          borderColor: '#FF0307',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.1,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            min: 0,
+            max: 0.5,
+            ticks: { stepSize: 0.1 },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          },
+          x: { grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          annotation: {
+            annotations: {
+              lineYellow: { type: 'line', yMin: 0.1, yMax: 0.1, borderColor: 'rgb(215, 244, 0)', borderWidth: 1.5, label: { display: true, content: '0.1 m/s²', position: 'end' } },
+              lineOrange: { type: 'line', yMin: 0.2, yMax: 0.2, borderColor: 'rgb(255, 125, 0)', borderWidth: 1.5, label: { display: true, content: '0.2 m/s²', position: 'end' } },
+              lineRed: { type: 'line', yMin: 0.3, yMax: 0.3, borderColor: 'rgb(255, 0, 0)', borderWidth: 1.5, label: { display: true, content: '0.3 m/s²', position: 'end' } }
+            }
+          }
+        }
+      }
+    });
+
+    setInterval(() => {
+      const val = parseFloat(getRandomValue());
+      document.getElementById('currentValue').innerText = val.toFixed(3);
+      
+      const badge = document.getElementById('statusBadge');
+      if (val < 0.1) { badge.innerText = 'ESTADO NORMAL'; badge.style.backgroundColor = '#4caf50'; }
+      else if (val < 0.2) { badge.innerText = 'PRECAUCIÓN'; badge.style.backgroundColor = '#d7f400'; badge.style.color = '#000'; }
+      else if (val < 0.3) { badge.innerText = 'ADVERTENCIA'; badge.style.backgroundColor = '#ff7d00'; badge.style.color = '#fff'; }
+      else { badge.innerText = 'PELIGRO / CRÍTICO'; badge.style.backgroundColor = '#ff0307'; badge.style.color = '#fff'; }
+
+      chart.data.datasets[0].data.push(val);
+      chart.data.datasets[0].data.shift();
+      chart.update('none');
+    }, 1000);
+  </script>
+</body>
+</html>
